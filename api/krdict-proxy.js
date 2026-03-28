@@ -19,46 +19,41 @@ function fetchWithTimeout(url, options, timeout = 8000) {
   });
 }
 
-// Translate text using LibreTranslate public API (no key required!)
+// Translate using MyMemory (free, no key)
 async function translateToEnglish(text) {
   if (!text) return text;
   
-  const postData = JSON.stringify({
-    q: text,
-    source: 'ko',
-    target: 'en',
-    format: 'text'
-  });
+  const encoded = encodeURIComponent(text);
+  const url = `https://api.mymemory.translated.net/get?q=${encoded}&langpair=ko|en`;
   
   const options = {
-    hostname: 'libretranslate.com',
-    path: '/translate',
-    method: 'POST',
+    hostname: 'api.mymemory.translated.net',
+    path: `/get?q=${encoded}&langpair=ko|en`,
+    method: 'GET',
     headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(postData)
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     }
   };
   
   return new Promise((resolve) => {
-    const req = https.request(options, (res) => {
+    const req = https.get(options, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
-          resolve(parsed.translatedText || text);
+          const translated = parsed.responseData?.translatedText;
+          resolve(translated || text);
         } catch (e) {
-          console.error('LibreTranslate parse error:', e.message);
+          console.error('MyMemory parse error:', e.message);
           resolve(text);
         }
       });
     });
     req.on('error', (e) => {
-      console.error('LibreTranslate request error:', e.message);
+      console.error('MyMemory request error:', e.message);
       resolve(text);
     });
-    req.write(postData);
     req.end();
   });
 }
@@ -136,7 +131,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Unexpected XML structure' });
     }
     
-    // Translate using LibreTranslate (no API key needed)
+    // Translate all definitions using MyMemory
     const translatedChannel = await translateDefinitions(parsed.channel);
     
     res.setHeader('Content-Type', 'application/json');
