@@ -16,14 +16,23 @@ app.get('/krdict-proxy', async (req, res) => {
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json'
       }
     });
+    if (!response.ok) {
+      throw new Error(`KRDict returned ${response.status}: ${await response.text()}`);
+    }
     const data = await response.text();
     res.set('Content-Type', 'application/json');
     res.send(data);
   } catch (error) {
-    res.status(502).json({ error: 'Failed to fetch from KRDict' });
+    console.error('Proxy error:', error.message, 'URL:', url);
+    res.status(502).json({ 
+      error: 'Failed to fetch from KRDict', 
+      details: error.message,
+      url: url
+    });
   }
 });
 
